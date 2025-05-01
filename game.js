@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let difficultyInterval;
     let playerPosition = 50; // Posição horizontal do jogador (%)
     let touchStartX = 0;
+    let obstacleCount = 0; // Contador para controlar padrão de zig-zag
+    let playerMovementSpeed = 30; // Velocidade de movimento lateral do jogador (aumentado)
+    let obstaclesPerGroup = 1; // Número de obstáculos que aparecem juntos
+    let gameTime = 0; // Tempo de jogo em segundos
+
+    // Controles de teclado para movimento mais rápido
+    document.addEventListener('keydown', handleKeyDown);
 
     // Obstáculos possíveis (emojis)
     const obstacles = ['🚧', '🪨', '🌵', '🚶', '🛢️', '🦝', '🐕'];
@@ -46,13 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
         isGameRunning = true;
         score = 0;
         gameSpeed = 5;
+        obstacleCount = 0;
+        obstaclesPerGroup = 1;
+        gameTime = 0;
         updateScore();
         
         // Iniciar música de fundo
         backgroundMusic.play().catch(e => console.log('Erro ao reproduzir música:', e));
         
         // Iniciar geração de elementos
-        obstacleInterval = setInterval(createObstacle, 1500);
+        obstacleInterval = setInterval(createObstacleGroup, 1500);
         roadLineInterval = setInterval(createRoadLine, 300);
         scoreInterval = setInterval(() => {
             score += 1;
@@ -61,10 +71,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Aumentar dificuldade com o tempo
         difficultyInterval = setInterval(() => {
-            if (gameSpeed < 15) {
+            gameTime++;
+            
+            if (gameSpeed < 20) {
                 gameSpeed += 0.5;
+                
+                // Reduzir o intervalo de criação de obstáculos à medida que a velocidade aumenta
+                clearInterval(obstacleInterval);
+                const newInterval = Math.max(500, 1500 - (gameSpeed - 5) * 100);
+                obstacleInterval = setInterval(createObstacleGroup, newInterval);
             }
-        }, 5000);
+            
+            // Aumentar o número de obstáculos por grupo a cada 20 segundos
+            if (gameTime % 20 === 0 && obstaclesPerGroup < 4) {
+                obstaclesPerGroup++;
+                console.log(`Aumentando obstáculos por grupo para: ${obstaclesPerGroup}`);
+            }
+        }, 1000);
         
         // Posicionar jogador no centro
         playerPosition = 50;
@@ -101,7 +124,20 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreElement.textContent = `SCORE: ${score}`;
     }
 
-    function createObstacle() {
+    // Nova função para criar grupos de obstáculos
+    function createObstacleGroup() {
+        if (!isGameRunning) return;
+        
+        // Criar vários obstáculos com base no nível de dificuldade atual
+        for (let i = 0; i < obstaclesPerGroup; i++) {
+            // Pequeno atraso entre cada obstáculo no grupo para criar padrões
+            setTimeout(() => {
+                createObstacle(i);
+            }, i * 200); // 200ms de atraso entre cada obstáculo no grupo
+        }
+    }
+
+    function createObstacle(groupIndex = 0) {
         if (!isGameRunning) return;
         
         const obstacle = document.createElement('div');
@@ -111,10 +147,65 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomEmoji = obstacles[Math.floor(Math.random() * obstacles.length)];
         obstacle.textContent = randomEmoji;
         
-        // Posicionar aleatoriamente na estrada
+        // Posicionar na estrada
         const roadWidth = 80; // Largura da estrada (%)
         const roadStart = 10; // Início da estrada (%)
-        const obstaclePosition = roadStart + Math.random() * roadWidth;
+        
+        // Determinar se este obstáculo fará parte de um padrão zig-zag
+        const isZigZag = Math.random() < 0.4; // 40% de chance de ser zig-zag
+        
+        let obstaclePosition;
+        
+        // Posicionamento especial para grupos de obstáculos
+        if (obstaclesPerGroup > 1) {
+            if (groupIndex === 0) {
+                // Primeiro obstáculo do grupo - posição aleatória
+                obstaclePosition = roadStart + Math.random() * roadWidth;
+            } else {
+                // Obstáculos subsequentes - criar padrões baseados no índice
+                // Dividir a estrada em seções para criar formações
+                const sectionWidth = roadWidth / (obstaclesPerGroup + 1);
+                
+                if (Math.random() < 0.5) {
+                    // Padrão em linha
+                    obstaclePosition = roadStart + (groupIndex + 1) * sectionWidth;
+                } else {
+                    // Padrão diagonal ou disperso
+                    obstaclePosition = roadStart + Math.random() * roadWidth;
+                    
+                    // Garantir distância mínima entre obstáculos
+                    const minDistance = 15; // % mínimo de distância
+                    const existingObstacles = document.querySelectorAll('.obstacle');
+                    let tooClose = false;
+                    
+                    existingObstacles.forEach(existing => {
+                        const existingPos = parseFloat(existing.style.left);
+                        if (Math.abs(existingPos - obstaclePosition) < minDistance) {
+                            tooClose = true;
+                        }
+                    });
+                    
+                    // Se estiver muito próximo, reposicionar
+                    if (tooClose) {
+                        obstaclePosition = roadStart + Math.random() * roadWidth;
+                    }
+                }
+            }
+        } else if (isZigZag) {
+            // Armazenar informação de zig-zag no elemento
+            obstacle.dataset.zigzag = 'true';
+            obstacle.dataset.zigzagDirection = Math.random() < 0.5 ? 'left' : 'right';
+            
+            // Posição inicial para padrão zig-zag
+            if (obstacle.dataset.zigzagDirection === 'left') {
+                obstaclePosition = roadStart + roadWidth * 0.7; // Começa mais à direita
+            } else {
+                obstaclePosition = roadStart + roadWidth * 0.3; // Começa mais à esquerda
+            }
+        } else {
+            // Posição aleatória para obstáculos normais
+            obstaclePosition = roadStart + Math.random() * roadWidth;
+        }
         
         obstacle.style.left = `${obstaclePosition}%`;
         obstacle.style.top = '-50px';
@@ -123,10 +214,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Animar o obstáculo descendo
         moveObstacle(obstacle);
+        
+        obstacleCount++;
     }
 
     function moveObstacle(obstacle) {
         let posY = -50;
+        let posX = parseFloat(obstacle.style.left);
+        const isZigZag = obstacle.dataset.zigzag === 'true';
+        const zigzagDirection = obstacle.dataset.zigzagDirection;
+        let zigzagAmplitude = 0.5; // Amplitude do movimento lateral
+        
         const moveInterval = setInterval(() => {
             if (!isGameRunning) {
                 clearInterval(moveInterval);
@@ -134,6 +232,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             posY += gameSpeed;
+            
+            // Movimento em zig-zag para obstáculos especiais
+            if (isZigZag) {
+                // Aumentar amplitude com base na velocidade do jogo
+                const amplitudeFactor = Math.min(2, gameSpeed / 5);
+                
+                if (zigzagDirection === 'left') {
+                    posX -= zigzagAmplitude * amplitudeFactor;
+                    if (posX < 10) { // Limite esquerdo da estrada
+                        obstacle.dataset.zigzagDirection = 'right';
+                    }
+                } else {
+                    posX += zigzagAmplitude * amplitudeFactor;
+                    if (posX > 90) { // Limite direito da estrada
+                        obstacle.dataset.zigzagDirection = 'left';
+                    }
+                }
+                
+                obstacle.style.left = `${posX}%`;
+            }
+            
             obstacle.style.top = `${posY}px`;
             
             // Verificar colisão
@@ -262,6 +381,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 20);
     }
     
+    // Função para lidar com eventos de teclado
+    function handleKeyDown(e) {
+        if (!isGameRunning) return;
+        
+        const roadWidth = 80; // Largura da estrada (%)
+        const roadStart = 10; // Início da estrada (%)
+        const roadEnd = roadStart + roadWidth;
+        const playerWidth = 10; // Largura aproximada do jogador em %
+        const moveStep = 5; // Movimento mais rápido com teclado
+        
+        if (e.key === 'ArrowLeft' || e.key === 'a') {
+            playerPosition = Math.max(roadStart + playerWidth/2, playerPosition - moveStep);
+            updatePlayerPosition();
+        } else if (e.key === 'ArrowRight' || e.key === 'd') {
+            playerPosition = Math.min(roadEnd - playerWidth/2, playerPosition + moveStep);
+            updatePlayerPosition();
+        }
+    }
+    
     function handleTouchStart(e) {
         touchStartX = e.touches[0].clientX;
     }
@@ -279,8 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const roadEnd = roadStart + roadWidth;
         const playerWidth = 10; // Largura aproximada do jogador em %
         
-        // Ajustar a posição do jogador com base no movimento
-        playerPosition += (diffX / window.innerWidth) * 15;
+        // Ajustar a posição do jogador com base no movimento - AUMENTADO para movimento mais rápido
+        playerPosition += (diffX / window.innerWidth) * playerMovementSpeed;
         
         // Limitar o jogador à estrada
         playerPosition = Math.max(roadStart + playerWidth/2, Math.min(roadEnd - playerWidth/2, playerPosition));
@@ -293,6 +431,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updatePlayerPosition() {
+        // Adicionar uma transição suave para o movimento do jogador
+        player.style.transition = 'left 0.1s ease-out';
         player.style.left = `${playerPosition}%`;
     }
     
@@ -341,4 +481,11 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreElement.style.color = scoreColor;
         scoreElement.style.textShadow = `0 0 5px ${scoreColor}`;
     }, 500);
+    
+    // Mostrar nível de dificuldade atual (número de obstáculos por grupo)
+    function updateDifficultyIndicator() {
+        // Opcional: Adicionar um indicador visual de dificuldade
+        const difficultyText = `LEVEL: ${obstaclesPerGroup}`;
+        // Se você tiver um elemento para mostrar o nível, pode atualizar aqui
+    }
 });
