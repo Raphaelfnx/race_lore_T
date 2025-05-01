@@ -1,0 +1,280 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Press Start 2P', cursive;
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Intro Screen */
+#intro-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+    z-index: 10;
+}
+
+#intro-animation {
+    width: 100%;
+    height: 40vh;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #000 0%, #111 100%);
+    margin-bottom: 20px;
+}
+
+#player-intro {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: playerRun 0.5s infinite alternate, roadMove 3s infinite linear;
+}
+
+@keyframes playerRun {
+    0% { transform: translateX(-50%) rotate(5deg); }
+    100% { transform: translateX(-50%) rotate(-5deg); }
+}
+
+@keyframes roadMove {
+    0% { bottom: -10%; }
+    100% { bottom: 100%; }
+}
+
+#intro-text {
+    width: 80%;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 40px;
+    color: #0f0;
+    text-shadow: 0 0 5px #0f0;
+}
+
+#start-button, #restart-button {
+    background-color: #0f0;
+    color: #000;
+    border: none;
+    padding: 15px 30px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 0 10px #0f0;
+}
+
+/* Game Screen */
+#game-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+#score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 16px;
+    color: #0f0;
+    z-index: 5;
+    text-shadow: 0 0 5px #0f0;
+}
+
+#game-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    overflow: hidden;
+}
+
+#road {
+    position: absolute;
+    width: 80%;
+    height: 100%;
+    left: 10%;
+    background-color: #222;
+    overflow: hidden;
+}
+
+.road-line {
+    position: absolute;
+    width: 10px;
+    height: 50px;
+    background-color: #fff;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -50px;
+}
+
+#moon {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #ddd;
+    box-shadow: 0 0 20px #fff;
+    top: 40px;
+    right: 40px;
+}
+
+#player {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-image: url('assets/player-run1.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 2;
+}
+
+.obstacle {
+    position: absolute;
+    font-size: 30px;
+    z-index: 1;
+}
+
+.street-light {
+    position: absolute;
+    width: 5px;
+    height: 40px;
+    background-color: #555;
+}
+
+.street-light::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 10px;
+    background-color: #ff9;
+    border-radius: 5px;
+    top: 0;
+    left: -5px;
+    box-shadow: 0 0 10px #ff9;
+}
+
+/* Game Over Screen */
+#game-over-screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 10;
+}
+
+#game-over-screen h2 {
+    color: #f00;
+    font-size: 32px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px #f00;
+}
+
+#final-score {
+    font-size: 20px;
+    margin-bottom: 30px;
+    color: #0f0;
+}
+
+/* Efeitos retrô adicionais */
+#game-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 9;
+}
+
+#game-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle at center,
+        transparent 60%,
+        rgba(0, 0, 0, 0.8) 100%
+    );
+    pointer-events: none;
+    z-index: 8;
+}
+
+/* Animação da lua */
+@keyframes moonGlow {
+    0% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.7); }
+    50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.9); }
+    100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.7); }
+}
+
+#moon {
+    animation: moonGlow 5s infinite ease-in-out;
+}
+
+/* Melhorar a animação de introdução */
+@keyframes introBackground {
+    0% { background-color: #000; }
+    50% { background-color: #111; }
+    100% { background-color: #000; }
+}
+
+#intro-screen {
+    animation: introBackground 5s infinite alternate;
+}
+
+/* Botões com efeito de piscar */
+@keyframes buttonGlow {
+    0% { box-shadow: 0 0 10px #0f0; }
+    50% { box-shadow: 0 0 20px #0f0, 0 0 30px #0f0; }
+    100% { box-shadow: 0 0 10px #0f0; }
+}
+
+#start-button, #restart-button {
+    animation: buttonGlow 2s infinite;
+}
+
+/* Melhorar a visualização dos obstáculos */
+.obstacle {
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
+}

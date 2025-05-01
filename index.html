@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Enduro Retrô</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <div id="intro-screen">
+            <div id="intro-animation">
+                <img id="player-intro" src="assets/player-run1.png" alt="Player">
+            </div>
+            <div id="intro-text">
+                <p>Ajude o player a desviar dos obstáculos para pontuar o máximo que conseguir</p>
+            </div>
+            <button id="start-button">INICIAR</button>
+        </div>
+        
+        <div id="game-screen" style="display: none;">
+            <div id="score">SCORE: 0</div>
+            <div id="game-area">
+                <div id="road">
+                    <div class="road-line"></div>
+                </div>
+                <div id="moon"></div>
+                <div id="obstacles-container"></div>
+                <div id="player"></div>
+                <div id="street-lights-container"></div>
+            </div>
+        </div>
+        
+        <div id="game-over-screen" style="display: none;">
+            <h2>GAME OVER</h2>
+            <p id="final-score">SCORE: 0</p>
+            <button id="restart-button">JOGAR NOVAMENTE</button>
+        </div>
+    </div>
+    
+    <audio id="background-music" loop>
+        <source src="assets/RBD - Otro Día Que Va (Instrumental).mp3" type="audio/mpeg">
+    </audio>
+    
+    <script src="game.js"></script>
+</body>
+</html>
