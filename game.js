@@ -24,9 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let playerPosition = 50; // Posição horizontal do jogador (%)
     let touchStartX = 0;
     let obstacleCount = 0; // Contador para controlar padrão de zig-zag
-    let playerMovementSpeed = 30; // Velocidade de movimento lateral do jogador (aumentado)
+    let playerMovementSpeed = 60; // AUMENTADO SIGNIFICATIVAMENTE para melhor resposta em touchscreen
     let obstaclesPerGroup = 1; // Número de obstáculos que aparecem juntos
     let gameTime = 0; // Tempo de jogo em segundos
+    let difficultyProgressionRate = 0.25; // Reduzido para progressão mais lenta (era 0.5)
+    let lastTouchTime = 0; // Para detectar toques rápidos
 
     // Controles de teclado para movimento mais rápido
     document.addEventListener('keydown', handleKeyDown);
@@ -38,9 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     startButton.addEventListener('click', startGame);
     restartButton.addEventListener('click', restartGame);
 
-    // Controles de toque
+    // Controles de toque aprimorados
     document.addEventListener('touchstart', handleTouchStart);
     document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
 
     // Criar linhas da estrada iniciais
     createInitialRoadLines();
@@ -69,21 +72,23 @@ document.addEventListener('DOMContentLoaded', () => {
             updateScore();
         }, 100);
         
-        // Aumentar dificuldade com o tempo
+        // Aumentar dificuldade com o tempo - MODIFICADO para progressão mais lenta
         difficultyInterval = setInterval(() => {
             gameTime++;
             
-            if (gameSpeed < 20) {
-                gameSpeed += 0.5;
+            // Aumentar velocidade mais lentamente
+            if (gameSpeed < 20 && gameTime % 4 === 0) { // A cada 4 segundos em vez de a cada segundo
+                gameSpeed += difficultyProgressionRate;
                 
                 // Reduzir o intervalo de criação de obstáculos à medida que a velocidade aumenta
                 clearInterval(obstacleInterval);
-                const newInterval = Math.max(500, 1500 - (gameSpeed - 5) * 100);
+                // Intervalo mais longo para dar mais tempo ao jogador
+                const newInterval = Math.max(800, 2000 - (gameSpeed - 5) * 80);
                 obstacleInterval = setInterval(createObstacleGroup, newInterval);
             }
             
-            // Aumentar o número de obstáculos por grupo a cada 20 segundos
-            if (gameTime % 20 === 0 && obstaclesPerGroup < 4) {
+            // Aumentar o número de obstáculos por grupo a cada 30 segundos (era 20)
+            if (gameTime % 30 === 0 && obstaclesPerGroup < 4) {
                 obstaclesPerGroup++;
                 console.log(`Aumentando obstáculos por grupo para: ${obstaclesPerGroup}`);
             }
@@ -222,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let posY = -50;
         let posX = parseFloat(obstacle.style.left);
         const isZigZag = obstacle.dataset.zigzag === 'true';
-        const zigzagDirection = obstacle.dataset.zigzagDirection;
+        let zigzagDirection = obstacle.dataset.zigzagDirection;
         let zigzagAmplitude = 0.5; // Amplitude do movimento lateral
         
         const moveInterval = setInterval(() => {
@@ -241,11 +246,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zigzagDirection === 'left') {
                     posX -= zigzagAmplitude * amplitudeFactor;
                     if (posX < 10) { // Limite esquerdo da estrada
+                        zigzagDirection = 'right';
                         obstacle.dataset.zigzagDirection = 'right';
                     }
                 } else {
                     posX += zigzagAmplitude * amplitudeFactor;
                     if (posX > 90) { // Limite direito da estrada
+                        zigzagDirection = 'left';
                         obstacle.dataset.zigzagDirection = 'left';
                     }
                 }
@@ -389,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const roadStart = 10; // Início da estrada (%)
         const roadEnd = roadStart + roadWidth;
         const playerWidth = 10; // Largura aproximada do jogador em %
-        const moveStep = 5; // Movimento mais rápido com teclado
+        const moveStep = 8; // AUMENTADO para movimento mais rápido com teclado (era 5)
         
         if (e.key === 'ArrowLeft' || e.key === 'a') {
             playerPosition = Math.max(roadStart + playerWidth/2, playerPosition - moveStep);
@@ -402,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function handleTouchStart(e) {
         touchStartX = e.touches[0].clientX;
+        lastTouchTime = Date.now();
     }
     
     function handleTouchMove(e) {
@@ -417,22 +425,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const roadEnd = roadStart + roadWidth;
         const playerWidth = 10; // Largura aproximada do jogador em %
         
-        // Ajustar a posição do jogador com base no movimento - AUMENTADO para movimento mais rápido
-        playerPosition += (diffX / window.innerWidth) * playerMovementSpeed;
+        // MELHORADO: Movimento mais responsivo em touchscreen
+        // Usar um multiplicador maior para movimentos pequenos para melhor resposta
+        const touchSensitivity = Math.abs(diffX) < 20 ? 1.5 : 1.0;
+        
+        // Ajustar a posição do jogador com base no movimento - AUMENTADO SIGNIFICATIVAMENTE
+        playerPosition += (diffX / window.innerWidth) * playerMovementSpeed * touchSensitivity;
         
         // Limitar o jogador à estrada
         playerPosition = Math.max(roadStart + playerWidth/2, Math.min(roadEnd - playerWidth/2, playerPosition));
         
-        // Atualizar posição
-        updatePlayerPosition();
+        // Atualizar posição com transição mais rápida para touchscreen
+        updatePlayerPositionTouch();
         
         // Atualizar posição inicial para o próximo movimento
         touchStartX = touchX;
     }
     
+    // Nova função para lidar com o fim do toque
+    function handleTouchEnd(e) {
+        // Detectar toques rápidos (tap) para movimentos mais precisos
+        const touchDuration = Date.now() - lastTouchTime;
+        
+        // Se foi um toque rápido (menos de 300ms), considerar como um tap
+        if (touchDuration < 300) {
+            // Verificar se há múltiplos toques para determinar a direção
+            const touches = e.changedTouches;
+            if (touches.length > 0) {
+                const touchX = touches[0].clientX;
+                const screenCenter = window.innerWidth / 2;
+                
+                // Mover para a esquerda ou direita com base na posição do toque
+                if (touchX < screenCenter) {
+                    // Tap no lado esquerdo da tela - mover para a esquerda
+                    playerPosition -= 10; // Movimento rápido
+                } else {
+                    // Tap no lado direito da tela - mover para a direita
+                    playerPosition += 10; // Movimento rápido
+                }
+                
+                // Limitar o jogador à estrada
+                const roadWidth = 80;
+                const roadStart = 10;
+                const roadEnd = roadStart + roadWidth;
+                const playerWidth = 10;
+                playerPosition = Math.max(roadStart + playerWidth/2, Math.min(roadEnd - playerWidth/2, playerPosition));
+                
+                // Atualizar posição
+                updatePlayerPosition();
+            }
+        }
+        
+        touchStartX = 0;
+    }
+    
     function updatePlayerPosition() {
-        // Adicionar uma transição suave para o movimento do jogador
+        // Transição suave para o movimento do jogador
         player.style.transition = 'left 0.1s ease-out';
+        player.style.left = `${playerPosition}%`;
+    }
+    
+    // Nova função para atualização mais rápida em touchscreen
+    function updatePlayerPositionTouch() {
+        // Transição mais rápida para touchscreen
+        player.style.transition = 'left 0.05s linear';
         player.style.left = `${playerPosition}%`;
     }
     
@@ -482,10 +538,18 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreElement.style.textShadow = `0 0 5px ${scoreColor}`;
     }, 500);
     
-    // Mostrar nível de dificuldade atual (número de obstáculos por grupo)
+    // Adicionar indicador de nível de dificuldade
     function updateDifficultyIndicator() {
-        // Opcional: Adicionar um indicador visual de dificuldade
-        const difficultyText = `LEVEL: ${obstaclesPerGroup}`;
-        // Se você tiver um elemento para mostrar o nível, pode atualizar aqui
+        // Se você quiser adicionar um indicador visual de dificuldade
+        // Pode criar um elemento HTML para isso e atualizá-lo aqui
+        const difficultyLevel = Math.min(4, Math.floor(gameSpeed / 5) + 1);
+        console.log(`Dificuldade atual: ${difficultyLevel}, Obstáculos por grupo: ${obstaclesPerGroup}`);
     }
+    
+    // Adicionar suporte para pausar o jogo (opcional)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+            // Implementar lógica de pausa aqui se desejar
+        }
+    });
 });
